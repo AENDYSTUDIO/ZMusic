@@ -1,0 +1,263 @@
+// This is your Prisma schema file for ZMusic - Decentralized Music Platform
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  username        String   @unique
+  displayName     String?
+  bio             String?
+  avatarUrl       String?
+  walletAddress   String?  // Web3 wallet address for decentralized features
+  isArtist        Boolean  @default(false)
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  tracks          Track[]
+  albums          Album[]
+  playlists       Playlist[]
+  followers       Follower[] @relation("UserFollowing")
+  following       Follower[] @relation("UserFollowers")
+  likes           Like[]
+  comments        Comment[]
+  listens         Listen[]
+  transactions    Transaction[]
+  rewards         Reward[]
+  
+  @@map("users")
+}
+
+// Track Model
+model Track {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  duration        Int      // Duration in seconds
+  audioUrl        String   // URL to the audio file (could be IPFS hash)
+  coverUrl        String?  // URL to the cover art
+  genre           String?
+  bpm             Int?
+  key             String?
+  isExplicit      Boolean  @default(false)
+  isPublic        Boolean  @default(true)
+  playCount       Int      @default(0)
+  likeCount       Int      @default(0)
+  downloadCount   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  artistId        String
+  artist          User     @relation(fields: [artistId], references: [id])
+  
+  albumId         String?
+  album           Album?   @relation(fields: [albumId], references: [id])
+  
+  playlists       PlaylistTrack[]
+  likes           Like[]
+  comments        Comment[]
+  listens         Listen[]
+  rewards         Reward[]
+  
+  @@map("tracks")
+}
+
+// Album Model
+model Album {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  coverUrl        String?
+  releaseDate     DateTime?
+  genre           String?
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  artistId        String
+  artist          User     @relation(fields: [artistId], references: [id])
+  
+  tracks          Track[]
+  
+  @@map("albums")
+}
+
+// Playlist Model
+model Playlist {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  isPublic        Boolean  @default(true)
+  coverUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  tracks          PlaylistTrack[]
+  likes           Like[]
+  
+  @@map("playlists")
+}
+
+// Playlist Track Junction Table
+model PlaylistTrack {
+  id         String   @id @default(cuid())
+  playlistId String
+  trackId    String
+  position   Int      // Position in the playlist
+  
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  
+  @@unique([playlistId, trackId])
+  @@map("playlist_tracks")
+}
+
+// Follower Model (User-User relationship)
+model Follower {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@map("followers")
+}
+
+// Like Model (for tracks and playlists)
+model Like {
+  id         String   @id @default(cuid())
+  userId     String
+  trackId    String?
+  playlistId String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track      Track?   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  playlist   Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, trackId])
+  @@unique([userId, playlistId])
+  @@map("likes")
+}
+
+// Comment Model
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  trackId   String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track     Track?   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  
+  @@map("comments")
+}
+
+// Listen Model (for tracking plays)
+model Listen {
+  id        String   @id @default(cuid())
+  userId    String
+  trackId   String
+  duration  Int      // Duration listened in seconds
+  completed Boolean  @default(false) // Whether the track was fully played
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  
+  @@map("listens")
+}
+
+// Node Model (for decentralized storage)
+model Node {
+  id            String   @id @default(cuid())
+  nodeId        String   @unique // Node identifier (could be wallet address)
+  type          String   // "content" or "discovery"
+  status        String   @default("active") // "active", "inactive", "banned"
+  ipAddress     String?
+  port          Int?
+  location      String?
+  stakeAmount   Float    @default(0) // Amount staked
+  rewardBalance Float    @default(0) // Pending rewards
+  lastHeartbeat DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  contentNodes  ContentNode[]
+  
+  @@map("nodes")
+}
+
+// Content Node Model (for IPFS storage)
+model ContentNode {
+  id          String   @id @default(cuid())
+  nodeId      String
+  contentHash String   @unique // IPFS hash or similar
+  fileSize    Int
+  contentType String
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  node        Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  
+  @@map("content_nodes")
+}
+
+// Transaction Model (for Web3 interactions)
+model Transaction {
+  id            String   @id @default(cuid())
+  hash          String   @unique // Blockchain transaction hash
+  type          String   // "stake", "unstake", "reward", "upload", "download"
+  userId        String?
+  amount        Float
+  tokenAddress  String?
+  blockNumber   Int?
+  status        String   @default("pending") // "pending", "confirmed", "failed"
+  createdAt     DateTime @default(now())
+  confirmedAt   DateTime?
+
+  user          User?    @relation(fields: [userId], references: [id])
+  
+  @@map("transactions")
+}
+
+// Reward Model (for token distribution)
+model Reward {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String   // "stream", "upload", "node", "referral"
+  amount        Float
+  trackId       String?
+  description   String?
+  claimed       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  claimedAt     DateTime?
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track         Track?   @relation(fields: [trackId], references: [id])
+  
+  @@map("rewards")
+}
