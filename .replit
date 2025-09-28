@@ -20,6 +20,7 @@ args = "ZMusic Dev Server"
 [[workflows.workflow]]
 name = "ZMusic Dev Server"
 author = "agent"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
