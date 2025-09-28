@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
     // 构建时忽略ESLint错误
     ignoreDuringBuilds: true,
   },
+  // Allow all hosts for Replit proxy
+  experimental: {
+    allowedHosts: true,
+  },
 };
 
 export default nextConfig;
