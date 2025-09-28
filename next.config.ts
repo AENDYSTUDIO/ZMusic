@@ -20,7 +20,10 @@ const nextConfig: NextConfig = {
     // 构建时忽略ESLint错误
     ignoreDuringBuilds: true,
   },
-  // Remove allowedHosts as it's not a valid Next.js config option
+  // Configure for Replit cross-origin requests
+  experimental: {
+    allowedDevOrigins: true,
+  },
 };
 
 export default nextConfig;
