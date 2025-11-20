@@ -20,10 +20,6 @@ const nextConfig: NextConfig = {
     // 构建时忽略ESLint错误
     ignoreDuringBuilds: true,
   },
-  // Configure for Replit cross-origin requests
-  experimental: {
-    allowedDevOrigins: true,
-  },
 };
 
 export default nextConfig;
